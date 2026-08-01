@@ -23,6 +23,33 @@ export type Limb = {
  * to the element centre, undo the rotation, undo the scale, then undo the
  * mirror.
  */
+/**
+ * One box measurement per limb per frame.
+ *
+ * Reading `getBoundingClientRect` forces a style recalculation whenever it
+ * follows a transform write in the same frame, and the pointer handler used to
+ * read it once per limb per event. Caching for the whole session is not an
+ * option either — the parallax moves the limbs continuously, so a stale box
+ * would drift the brush away from the cursor. Measuring once per frame, before
+ * that frame's writes, is both accurate and free of the read-after-write.
+ */
+let generation = 0
+const boxes = new WeakMap<HTMLElement, { gen: number; rect: DOMRect }>()
+
+/** Call at the top of each frame, before any transform is written. */
+export function newFrame() {
+  generation++
+}
+
+function boxOf(el: HTMLElement): DOMRect {
+  const hit = boxes.get(el)
+  if (hit && hit.gen === generation) return hit.rect
+
+  const rect = el.getBoundingClientRect()
+  boxes.set(el, { gen: generation, rect })
+  return rect
+}
+
 export function toLimbSpace(
   el: HTMLElement,
   limb: Limb,
@@ -30,7 +57,7 @@ export function toLimbSpace(
   py: number,
   size: { w: number; h: number },
 ): Vec {
-  const r = el.getBoundingClientRect()
+  const r = boxOf(el)
   const cx = r.left + r.width / 2
   const cy = r.top + r.height / 2
 
@@ -42,12 +69,16 @@ export function toLimbSpace(
   let ly = dx * Math.sin(t) + dy * Math.cos(t)
 
   // The AABB of a rotated box is larger than the box, so recover the scale
-  // from the unrotated width the element was laid out at.
-  const a = Math.abs(Math.cos((limb.rotate * Math.PI) / 180))
-  const b = Math.abs(Math.sin((limb.rotate * Math.PI) / 180))
-  const det = a * a - b * b
-  const w = det !== 0 ? (a * r.width - b * r.height) / det : r.width
-  const scale = w / size.w || 1
+  // from the unrotated size the element was laid out at.
+  //
+  // Solving the 2x2 system per-axis would divide by cos(2θ), which vanishes at
+  // ±45° and is ill-conditioned anywhere near it. Summing the two rows instead
+  // gives Wbb + Hbb = (w + h)(a + b), whose divisor is bounded below by
+  // (size.w + size.h) at every angle.
+  const rad = (limb.rotate * Math.PI) / 180
+  const a = Math.abs(Math.cos(rad))
+  const b = Math.abs(Math.sin(rad))
+  const scale = (r.width + r.height) / ((a + b) * (size.w + size.h)) || 1
 
   lx /= scale
   ly /= scale

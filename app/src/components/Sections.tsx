@@ -289,9 +289,61 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-hairline pt-6 text-[11.5px] text-ink-faint sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 flex flex-col gap-3 border-t border-hairline pt-6 text-[11.5px] text-ink-faint sm:flex-row sm:items-start sm:justify-between">
           <p>© {new Date().getFullYear()} Sylva. A design study, not a financial product.</p>
-          <p>Market figures shown are illustrative.</p>
+
+          {/* CC BY and CC BY-SA both require credit, a licence link and a note
+              of modification *in the medium the work is shared in*. A file in
+              the repository does not discharge that for a visitor to the page,
+              so the credit ships with the site. */}
+          <p className="sm:text-right">
+            Market figures shown are illustrative. Imagery adapted from photographs by{' '}
+            <a
+              className="underline underline-offset-2 hover:text-ink"
+              href="https://commons.wikimedia.org/wiki/File:Lichen-Covered_Tree_Bark_Close-Up.jpg"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              A S M Jobaer
+            </a>
+            ,{' '}
+            <a
+              className="underline underline-offset-2 hover:text-ink"
+              href="https://commons.wikimedia.org/wiki/File:Green_moss_growing_on_a_rock.jpg"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Phina001
+            </a>{' '}
+            and{' '}
+            <a
+              className="underline underline-offset-2 hover:text-ink"
+              href="https://commons.wikimedia.org/wiki/File:Half_Dome_and_Bridalveil_Falls_from_Tunnel_View_Yosemite_National_Park_,(_2012)_(2).jpg"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Pierre André Leclercq
+            </a>
+            , used under{' '}
+            <a
+              className="underline underline-offset-2 hover:text-ink"
+              href="https://creativecommons.org/licenses/by-sa/4.0/"
+              rel="noopener noreferrer license"
+              target="_blank"
+            >
+              CC&nbsp;BY-SA&nbsp;4.0
+            </a>{' '}
+            and{' '}
+            <a
+              className="underline underline-offset-2 hover:text-ink"
+              href="https://creativecommons.org/licenses/by/4.0/"
+              rel="noopener noreferrer license"
+              target="_blank"
+            >
+              CC&nbsp;BY&nbsp;4.0
+            </a>
+            .
+          </p>
         </div>
       </Reveal>
     </footer>

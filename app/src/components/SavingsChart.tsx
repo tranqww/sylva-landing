@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import { gsap, ScrollTrigger, prefersReducedMotion, useIsoLayoutEffect } from '../lib/motion'
 import { smoothPath, toPoints } from '../lib/curve'
 import { CHART } from '../data/site'
-import { signedMoney } from '../lib/format'
+import { money, signedMoney } from '../lib/format'
 
 const W = 480
 const H = 186
@@ -62,7 +62,11 @@ export function SavingsChart() {
     <div ref={root} className="relative">
       <div className="flex gap-2">
         {/* y axis */}
-        <ul className="tabular flex shrink-0 flex-col justify-between py-[10px] text-[9px] text-ink-faint" style={{ height: H }}>
+        <ul
+          aria-hidden
+          className="tabular flex shrink-0 flex-col justify-between py-[10px] text-[10.5px] text-ink-faint"
+          style={{ height: H }}
+        >
           {[...CHART.ticks].reverse().map((t) => (
             <li key={t}>{t / 1000}k</li>
           ))}
@@ -74,8 +78,7 @@ export function SavingsChart() {
             className="w-full overflow-visible"
             style={{ height: H }}
             preserveAspectRatio="none"
-            role="img"
-            aria-label="Weekly income against expenses"
+            aria-hidden
           >
             {CHART.ticks.map((t) => (
               <line
@@ -155,8 +158,37 @@ export function SavingsChart() {
         </div>
       </div>
 
+      {/* The drawn chart is decorative — a line is not reachable by a screen
+          reader. The figures themselves live in this table, which is the only
+          accessible copy of the data. */}
+      <table className="sr-only">
+        <caption>
+          Weekly income against expenses. Marked day: {CHART.days[CHART.activeDay]}, income{' '}
+          {signedMoney(CHART.tooltip.up)}, expenses {signedMoney(CHART.tooltip.down)}.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Day</th>
+            <th scope="col">Income</th>
+            <th scope="col">Expenses</th>
+          </tr>
+        </thead>
+        <tbody>
+          {CHART.days.map((day, i) => {
+            const at = Math.round(((i + 0.5) / CHART.days.length) * (CHART.income.length - 1))
+            return (
+              <tr key={day}>
+                <th scope="row">{day}</th>
+                <td>{money(CHART.income[at])}</td>
+                <td>{money(CHART.expenses[at])}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+
       {/* x axis */}
-      <ul className="mt-3 ml-7 grid grid-cols-7 text-center text-[10px]">
+      <ul aria-hidden className="mt-3 ml-7 grid grid-cols-7 text-center text-[10px]">
         {CHART.days.map((d, i) => (
           <li
             key={d}

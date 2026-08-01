@@ -15,6 +15,9 @@ export function Ring({
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
 
+  // Decorative on purpose. The arc is derived from the same change figure
+  // printed next to it, so labelling it would make a screen reader announce
+  // the number twice rather than tell anyone something new.
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
       <circle
@@ -100,6 +103,8 @@ export function Sparkline({
 }) {
   const pts = toPoints(values, { width, height, padY: 2 }, [0, 1])
 
+  // Decorative: the direction it shows is already stated by the signed
+  // percentage beside it.
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} fill="none" aria-hidden>
       <path

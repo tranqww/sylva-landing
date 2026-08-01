@@ -26,7 +26,11 @@ import urllib.request
 import numpy as np
 from PIL import Image, ImageFilter
 
-Image.MAX_IMAGE_PIXELS = None
+# Generous, but not unbounded: the sources here are 4–7 MP, so Pillow's
+# decompression-bomb guard was never going to fire on them. Disabling it
+# outright only removed the one protection against a hostile or accidentally
+# enormous response exhausting memory.
+Image.MAX_IMAGE_PIXELS = 200_000_000
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CACHE = os.path.join(ROOT, "scripts", ".cache")
@@ -65,7 +69,14 @@ def resolve(title: str, width: int) -> str:
     api = ("https://commons.wikimedia.org/w/api.php?action=query&format=json"
            f"&titles={q}&prop=imageinfo&iiprop=url&iiurlwidth={width}")
     pages = json.loads(http(api))["query"]["pages"]
-    return next(iter(pages.values()))["imageinfo"][0]["thumburl"]
+    url = next(iter(pages.values()))["imageinfo"][0]["thumburl"]
+
+    # The URL comes back over the wire and is handed straight to urlopen, whose
+    # default opener also speaks file:// and ftp://. Pinning the host keeps a
+    # surprising response from turning into a local file read.
+    if not url.startswith("https://upload.wikimedia.org/"):
+        raise ValueError(f"unexpected thumbnail host: {url}")
+    return url
 
 
 def fetch(name: str, title: str, width: int) -> str:
@@ -321,7 +332,9 @@ def main() -> int:
     v = v.crop(
         (int(v.width * 0.13), int(v.height * 0.14), int(v.width * 0.81), v.height)
     )
-    v = v.resize((1440, int(1440 * v.height / v.width)), Image.LANCZOS)
+    # The panel renders at 525 CSS px, so 1100 covers it at DPR 2 with a little
+    # headroom. 1440 was ~2.8x oversampled and cost roughly 100 kB for nothing.
+    v = v.resize((1100, int(1100 * v.height / v.width)), Image.LANCZOS)
 
     # Warm it toward the reference's low golden light and lift the shadows so
     # the overlay copy still has something to sit on.

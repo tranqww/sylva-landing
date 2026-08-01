@@ -84,11 +84,26 @@ export function MossCanvas({
     let ready = false
     let dirty = false
     let raf = 0
+    // StrictMode runs this effect twice against the *same* canvas node, so the
+    // two passes share one 2d context. Without this flag the first pass's
+    // `img.onload` would fire after the second pass is live and composite
+    // `destination-in` against its own empty reveal buffer, erasing whatever
+    // the live instance had painted.
+    let killed = false
+    let failed = false
 
     const compose = () => {
       raf = 0
-      if (!ready || !dirty) return
+      if (killed || !ready || !dirty) return
       dirty = false
+
+      // A broken HTMLImageElement throws InvalidStateError from drawImage, so
+      // a failed asset has to short-circuit before the composite, not just
+      // produce an empty mask.
+      if (failed) {
+        ctx.clearRect(0, 0, W, H)
+        return
+      }
 
       // reveal = base ∪ trail
       vctx.globalCompositeOperation = 'source-over'
@@ -107,6 +122,7 @@ export function MossCanvas({
     }
 
     const schedule = () => {
+      if (killed) return
       dirty = true
       if (!raf) raf = requestAnimationFrame(compose)
     }
@@ -175,26 +191,50 @@ export function MossCanvas({
         const edge = Math.max(0, progress) * W * BASE_REACH
         bctx.globalCompositeOperation = 'source-over'
         bctx.clearRect(0, 0, W, H)
-        if (edge <= 0) return
 
-        const feather = W * 0.3
-        const g = bctx.createLinearGradient(Math.max(0, edge - feather), 0, edge, 0)
-        g.addColorStop(0, `rgba(255,255,255,${BASE_PEAK})`)
-        g.addColorStop(1, 'rgba(255,255,255,0)')
-        bctx.fillStyle = g
-        bctx.fillRect(0, 0, edge, H)
+        if (edge > 0) {
+          const feather = W * 0.3
+          const g = bctx.createLinearGradient(Math.max(0, edge - feather), 0, edge, 0)
+          g.addColorStop(0, `rgba(255,255,255,${BASE_PEAK})`)
+          g.addColorStop(1, 'rgba(255,255,255,0)')
+          bctx.fillStyle = g
+          bctx.fillRect(0, 0, edge, H)
+        }
+
+        // Unconditional: the clear above is itself a change to show, so
+        // sweep(0) has to repaint rather than leave the last mask on screen.
         schedule()
       },
     }
 
     register(handle)
+
     img.onload = () => {
+      ready = true
+      schedule()
+    }
+    img.onerror = () => {
+      // The page degrades to bare bark rather than hanging on a mask that
+      // will never arrive — and says so, since an empty <canvas> looks like
+      // nothing at all rather than a broken image.
+      console.warn(`[MossCanvas] moss layer for limb ${limb.index} failed to load`)
+      failed = true
       ready = true
       schedule()
     }
 
     return () => {
+      killed = true
       if (raf) cancelAnimationFrame(raf)
+      img.onload = null
+      img.onerror = null
+      img.src = ''
+      // Release the three backing stores rather than waiting for GC; each is
+      // roughly 2.6 MB at dpr 2.
+      for (const c of [base, trail, reveal]) {
+        c.width = 0
+        c.height = 0
+      }
       register(null)
     }
   }, [limb, register, getLimbEl])

@@ -1,5 +1,5 @@
 import { useCallback, useImperativeHandle, useRef, useState, type Ref } from 'react'
-import { gsap, prefersReducedMotion } from '../lib/motion'
+import { gsap, prefersReducedMotion, useIsoLayoutEffect } from '../lib/motion'
 import { COINS } from '../data/site'
 import { money, percent } from '../lib/format'
 import { CoinIcon, Logo } from './icons'
@@ -22,6 +22,19 @@ export function PortfolioMorph({ ref }: { ref?: Ref<PortfolioMorphHandle> }) {
   const list = useRef<HTMLUListElement>(null)
   const [expanded, setExpanded] = useState(false)
   const busy = useRef(false)
+  const running = useRef<gsap.core.Timeline | null>(null)
+
+  // `expand` is invoked from Hero's intro timeline ~1.9s after Hero's
+  // gsap.context has already returned, so the timelines created here are never
+  // adopted by that context and would survive unmount. They are owned here.
+  useIsoLayoutEffect(
+    () => () => {
+      running.current?.kill()
+      running.current = null
+      busy.current = false
+    },
+    [],
+  )
 
   const expand = useCallback(() => {
     if (expanded || busy.current || !wrap.current || !list.current || !pill.current) return
@@ -38,8 +51,14 @@ export function PortfolioMorph({ ref }: { ref?: Ref<PortfolioMorphHandle> }) {
     }
 
     busy.current = true
-    gsap
-      .timeline({ onComplete: () => (busy.current = false) })
+    // `onInterrupt` as well as `onComplete`: a kill on unmount or a competing
+    // tween would otherwise latch `busy` true forever and dead-lock both
+    // directions of the morph.
+    running.current = gsap
+      .timeline({
+        onComplete: () => (busy.current = false),
+        onInterrupt: () => (busy.current = false),
+      })
       .to(pill.current, { autoAlpha: 0, filter: 'blur(8px)', duration: 0.34, ease: 'power2.in' }, 0)
       .to(wrap.current, { height: target, duration: 0.86, ease: 'settle' }, 0.06)
       .to(
@@ -64,15 +83,22 @@ export function PortfolioMorph({ ref }: { ref?: Ref<PortfolioMorphHandle> }) {
     const rows = gsap.utils.toArray<HTMLElement>('[data-row]', list.current)
     busy.current = true
 
-    gsap
+    running.current = gsap
       .timeline({
         onComplete: () => {
           busy.current = false
           setExpanded(false)
         },
+        onInterrupt: () => (busy.current = false),
       })
       .set(wrap.current, { height: list.current.scrollHeight })
-      .to(rows, { autoAlpha: 0, y: 12, filter: 'blur(8px)', duration: 0.3, stagger: -0.04 }, 0)
+      // Collapsing back to the JSX rest state means restoring scaleY too,
+      // otherwise a second expand replays without the squash.
+      .to(
+        rows,
+        { autoAlpha: 0, y: 18, scaleY: 0.92, filter: 'blur(10px)', duration: 0.3, stagger: -0.04 },
+        0,
+      )
       .to(wrap.current, { height: COLLAPSED_H, duration: 0.6, ease: 'settle' }, 0.1)
       .to(pill.current, { autoAlpha: 1, filter: 'blur(0px)', duration: 0.4 }, 0.28)
   }, [expanded])

@@ -19,11 +19,32 @@
     />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <!-- Relative so the page also works from a GitHub Pages project subpath.
-         The limb images are not preloaded here: Vite does not rewrite
-         `preload` hrefs against `base`, so the hints would 404 off-root.
-         The <img> elements carry fetchpriority="high" instead. -->
+    <!-- No external origins at runtime: fonts, images and scripts are all
+         bundled. The policy is a tripwire — if a dependency ever starts
+         beaconing, the page breaks loudly instead of leaking quietly.
+         `style-src` needs 'unsafe-inline' because GSAP writes inline style
+         attributes on every frame; `img-src data:` covers the noise texture.
+         (frame-ancestors is ignored in meta form, and GitHub Pages cannot set
+         real headers — but the page has no auth, forms or state to clickjack.) -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+
+    <!-- The hero limb is the LCP element, and in a client-rendered app the
+         <img> does not exist until React mounts — so the preload scanner
+         cannot find it and the fetch starts ~180ms after the JS has already
+         landed. Vite substitutes %BASE_URL% at build time, so this resolves
+         correctly under the GitHub Pages project subpath. -->
+    <link
+      rel="preload"
+      as="image"
+      fetchpriority="high"
+      href="%BASE_URL%assets/branch-1.webp"
+    />
+    <link rel="preload" as="image" href="%BASE_URL%assets/branch-2.webp" />
   </head>
   <body>
     <div id="root"></div>

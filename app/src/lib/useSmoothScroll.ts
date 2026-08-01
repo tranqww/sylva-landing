@@ -12,7 +12,10 @@ export function scrollTo(target: string | number) {
     else window.scrollTo({ top: typeof target === 'number' ? target : 0, behavior: 'smooth' })
     return
   }
-  lenis.scrollTo(target, { offset: -8, duration: 1.4 })
+  // No `duration`: Lenis only honours one when an `easing` is supplied too,
+  // and otherwise falls through to the lerp. Passing it documented an intent
+  // the library never acted on.
+  lenis.scrollTo(target, { offset: -8 })
 }
 
 /**
@@ -23,8 +26,9 @@ export function useSmoothScroll() {
   useEffect(() => {
     if (prefersReducedMotion()) return
 
+    // Lerp only. Lenis picks the duration/easing path exclusively when both
+    // are given, so a `duration` alongside a `lerp` is dead configuration.
     const instance = new Lenis({
-      duration: 1.1,
       lerp: 0.09,
       wheelMultiplier: 0.9,
       touchMultiplier: 1.6,
@@ -42,6 +46,9 @@ export function useSmoothScroll() {
       gsap.ticker.remove(tick)
       instance.destroy()
       lenis = null
+      // lagSmoothing is global state; leaving it off would strip lag
+      // protection from every other animation on the page after unmount.
+      gsap.ticker.lagSmoothing(500, 33)
     }
   }, [])
 }

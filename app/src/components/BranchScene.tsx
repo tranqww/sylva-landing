@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { gsap, ScrollTrigger, prefersReducedMotion, useIsoLayoutEffect } from '../lib/motion'
 import { asset } from '../lib/format'
-import { watchPointer, type Limb, type Vec } from '../lib/pointer'
+import { newFrame, watchPointer, type Limb, type Vec } from '../lib/pointer'
 import { MossCanvas, type MossHandle } from './MossCanvas'
 
 /**
@@ -104,25 +104,40 @@ export function BranchScene() {
 
       const tilt = el.querySelector('[data-branch-tilt]')
 
+      // quickSetters skip building a Tween per call. The ticker fires outside
+      // the context's synchronous run, so tweens created here would not be
+      // adopted by it anyway — these writes are undone by the explicit
+      // gsap.set in the cleanup below.
+      const setLimb = limbs.current.map((n) => (n ? gsap.quickSetter(n, 'css') : null))
+      const setTilt = tilt ? gsap.quickSetter(tilt, 'css') : null
+
       const tick = () => {
-        eased.x += (target.x - eased.x) * 0.055
-        eased.y += (target.y - eased.y) * 0.055
+        const dx = target.x - eased.x
+        const dy = target.y - eased.y
 
-        limbs.current.forEach((node, i) => {
-          if (!node) return
-          const d = LIMBS[i].depth
-          gsap.set(node, { x: eased.x * 30 * d, y: eased.y * 22 * d })
-        })
+        // Nothing to do: without this the ticker keeps writing identical
+        // transforms sixty times a second for the life of the tab, which
+        // measured at roughly 4% of the main thread doing no visible work.
+        if (!pending && Math.abs(dx) + Math.abs(dy) < 0.0005) return
 
-        if (tilt) {
-          gsap.set(tilt, { rotationY: eased.x * 2.6, rotationX: -eased.y * 1.8 })
-        }
+        newFrame()
 
+        // Read before write. Painting samples each limb's box, and doing that
+        // after this frame's transform writes would force a style recalc.
         if (pending) {
           const p = pending
           pending = null
           moss.current.forEach((m) => m?.paint(p))
         }
+
+        eased.x += dx * 0.055
+        eased.y += dy * 0.055
+
+        for (let i = 0; i < setLimb.length; i++) {
+          const d = LIMBS[i].depth
+          setLimb[i]?.({ x: eased.x * 30 * d, y: eased.y * 22 * d })
+        }
+        setTilt?.({ rotationY: eased.x * 2.6, rotationX: -eased.y * 1.8 })
       }
 
       gsap.ticker.add(tick)
@@ -148,6 +163,9 @@ export function BranchScene() {
       return () => {
         gsap.ticker.remove(tick)
         stopPointer()
+        // quickSetter writes bypass the context, so clear them by hand.
+        const nodes = [...limbs.current.filter(Boolean), tilt].filter(Boolean)
+        if (nodes.length) gsap.set(nodes as Element[], { clearProps: 'transform' })
       }
     }, el)
 

@@ -82,13 +82,13 @@ export function Showcase() {
           {/* ------------------------------------------------- photo panel */}
           <figure
             data-panel
-            className="relative isolate overflow-hidden rounded-[20px] lg:col-start-1 lg:row-start-1 lg:h-[542px]"
+            className="relative isolate min-w-0 overflow-hidden rounded-[20px] lg:col-start-1 lg:row-start-1 lg:h-[542px]"
           >
             <img
               src={asset('assets/valley.webp')}
               alt="A hazy mountain valley at first light, seen from a high overlook"
-              width={1440}
-              height={1210}
+              width={1100}
+              height={891}
               loading="lazy"
               decoding="async"
               className="absolute inset-0 size-full object-cover object-[46%_62%]"
@@ -112,9 +112,13 @@ export function Showcase() {
           </figure>
 
           {/* --------------------------------------------------- dashboard */}
+          {/* `min-w-0`: a grid item's default `min-width: auto` refuses to go
+              below its min-content width, and the dashboard's header row and
+              seven-column axis add up to ~330px. Without this the column
+              pushed the document 26px wide below 1280px. */}
           <div
             data-dashboard-wrap
-            className="lg:col-start-2 lg:row-start-1 lg:-ml-3 lg:h-[542px] lg:pt-[96px]"
+            className="min-w-0 lg:col-start-2 lg:row-start-1 lg:-ml-3 lg:h-[542px] lg:pt-[96px]"
           >
             <Dashboard />
           </div>

@@ -144,7 +144,7 @@ The build takes its base path from `VITE_BASE`, so it works at the domain root
 or under a project-site subpath:
 
 ```bash
-npm run deploy -- --remote origin --base /sylva-landing/
+npm run deploy -- --remote showcase --base /sylva-landing/
 ```
 
 That builds with the given base, then force-pushes `dist/` to an orphan

@@ -34,19 +34,24 @@
   --color-sage: #afbd9f;
   --color-sage-deep: #9dae8b;
 
-  --color-ink: #0d100c;
-  --color-ink-soft: #3f4642;
-  --color-ink-muted: #6f7873;
-  --color-ink-faint: #a4aca6;
-  --color-ink-ghost: #c3cac5;
+  /* Every step of this ramp clears WCAG AA against both surfaces it is used
+     on (#ffffff and the #fafcfc top of the screen gradient): the de-emphasised
+     labels are all 10–13px, so they need 4.5:1, not 3:1. `ink-ghost` is the
+     one exception — it is only ever set on the ~59px hero line, which is large
+     text and so needs 3:1. Ratios are in the table below. */
+  --color-ink: #0d100c; /* 19.15 on white */
+  --color-ink-soft: #3f4642; /* 9.69 */
+  --color-ink-muted: #5c6560; /* 6.03 */
+  --color-ink-faint: #6c7570; /* 4.75 */
+  --color-ink-ghost: #859389; /* 3.20, large text only */
 
   --color-surface: #f7faf9;
   --color-surface-sunk: #eef1f0;
   --color-hairline: rgb(13 16 12 / 0.08);
   --color-hairline-soft: rgb(13 16 12 / 0.05);
 
-  --color-up: #1f9254;
-  --color-down: #d0433a;
+  --color-up: #1c844c; /* 4.74 on white; the brighter #1f9254 was 3.96 */
+  --color-down: #c93b31; /* 4.98 on white */
 
   --color-btc: #f7931a;
   --color-eth: #5b6ee1;
@@ -72,6 +77,12 @@
   html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: auto; /* Lenis owns scrolling */
+
+    /* `clip`, not `hidden`. `overflow-x: hidden` next to a visible y axis
+       computes the y axis to `auto`, which turns the element into a scroll
+       container instead of propagating to the viewport — the page really did
+       scroll 26px sideways below 1280px. `clip` has no such side effect. */
+    overflow-x: clip;
   }
 
   body {
@@ -83,7 +94,7 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   ::selection {
@@ -142,8 +153,14 @@
 
 @utility panel-glass {
   background: rgb(255 255 255 / 0.72);
-  backdrop-filter: blur(18px) saturate(1.25);
+  /* Prefixed first, standard last, and the order is load-bearing: the
+     minifier collapses the duplicate pair and keeps the *last* declaration.
+     With the standard property written first it was dropped entirely, leaving
+     only `-webkit-backdrop-filter` — so Firefox, which implements the
+     unprefixed property and not the alias, rendered every glass panel as a
+     flat translucent fill. */
   -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  backdrop-filter: blur(18px) saturate(1.25);
   border: 1px solid rgb(255 255 255 / 0.6);
   box-shadow:
     0 1px 1px rgb(13 16 12 / 0.04),

@@ -7,11 +7,10 @@ gsap.registerPlugin(ScrollTrigger, CustomEase)
 
 /**
  * The reference motion is unusually "settled": everything decelerates hard and
- * then stops dead rather than easing out over a long tail. These two curves
- * carry almost every transition on the page.
+ * then stops dead rather than easing out over a long tail. This curve carries
+ * almost every transition on the page; the rest use GSAP's stock eases.
  */
 CustomEase.create('settle', '0.16, 1, 0.28, 1')
-CustomEase.create('swift', '0.33, 1, 0.5, 1')
 
 gsap.defaults({ ease: 'settle', duration: 0.9 })
 

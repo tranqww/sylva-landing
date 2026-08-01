@@ -7,9 +7,22 @@ export function Nav() {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLElement>(null)
 
+  const menu = useRef<HTMLUListElement>(null)
+  const toggle = useRef<HTMLButtonElement>(null)
+
   useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+
+    // Move focus into the panel that just appeared, and hand it back to the
+    // control that opened it on close, so the menu is operable without a
+    // pointer.
+    menu.current?.querySelector<HTMLAnchorElement>('a')?.focus()
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      setOpen(false)
+      toggle.current?.focus()
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
@@ -65,6 +78,7 @@ export function Nav() {
         </button>
 
         <button
+          ref={toggle}
           type="button"
           aria-expanded={open}
           aria-controls="mobile-nav"
@@ -84,6 +98,7 @@ export function Nav() {
 
       {open && (
         <ul
+          ref={menu}
           id="mobile-nav"
           className="panel-glass absolute top-16 left-1/2 w-[min(320px,calc(100vw-40px))] -translate-x-1/2 rounded-2xl p-2 md:hidden"
         >

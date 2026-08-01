@@ -23,8 +23,10 @@ export default function App() {
 
   return (
     <Frame>
+      {/* Targets <main>, not the third section down: skipping the nav should
+          not also skip the hero and the product section. */}
       <a
-        href="#services"
+        href="#main"
         className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-4 focus-visible:left-1/2 focus-visible:z-50 focus-visible:-translate-x-1/2 focus-visible:rounded-full focus-visible:bg-ink focus-visible:px-4 focus-visible:py-2 focus-visible:text-sm focus-visible:text-white"
       >
         Skip to content
@@ -33,7 +35,7 @@ export default function App() {
       <BranchScene />
       <Nav />
 
-      <main>
+      <main id="main" tabIndex={-1} className="focus:outline-none">
         <Hero />
         <Showcase />
         <Services />
