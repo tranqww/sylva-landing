@@ -176,11 +176,13 @@
 @property --moss {
   syntax: '<number>';
   inherits: false;
-  initial-value: 1;
+  initial-value: 0;
 }
 
+/* The limb starts bare. `--moss` is swept to 1 by the intro timeline, which
+   walks the mask edge along the branch so the moss grows rather than fades. */
 .branch-moss {
-  --moss: 1;
+  --moss: 0;
   -webkit-mask-image: linear-gradient(
     92deg,
     #000 0,
@@ -229,5 +231,12 @@
   .anim-hidden {
     opacity: 1 !important;
     filter: none !important;
+  }
+
+  /* Belt and braces for the one property whose default is the *unfinished*
+     state: if the script never runs, the limbs must still be mossy. */
+  .branch-moss {
+    --moss: 1;
+    opacity: 1;
   }
 }

@@ -58,30 +58,65 @@ export function BranchScene() {
     const hero = document.querySelector('#top')
 
     const ctx = gsap.context(() => {
-      if (prefersReducedMotion()) return
+      if (prefersReducedMotion()) {
+        // The limbs default to bare so the moss can grow; without a timeline
+        // to run, the grown state has to be set directly.
+        gsap.set('[data-moss]', { '--moss': 1, autoAlpha: 1 })
+        return
+      }
 
-      gsap
-        .timeline({ defaults: { ease: 'settle' } })
-        .fromTo(
+      // Timings and distances read off the reference frame by frame (branch
+      // centroid and moss coverage tracked per frame, 30 fps):
+      //
+      //   0.10 → 0.40s  the limb sweeps up into frame from the lower left —
+      //                 area 0.1% → 18.6%, leading edge 0.94 → 0.53 of the
+      //                 card height. It arrives sharp and opaque; it does not
+      //                 fade or blur in.
+      //   0.60 → 1.35s  moss grows on the bare limb, 2% → 32% of its area,
+      //                 steepest between 0.9s and 1.2s.
+      //   1.3s onward   a slow continuous float: up until ~1.2s, back down and
+      //                 left until ~2.6s, out again from ~3.4s.
+      const tl = gsap.timeline()
+
+      tl.fromTo(
+        '[data-branch]',
+        { yPercent: 58, xPercent: -8, scale: 1.12, autoAlpha: 0 },
+        { autoAlpha: 1, duration: 0.16, ease: 'none' },
+        0,
+      )
+        .to(
           '[data-branch]',
-          { yPercent: 22, scale: 1.12, autoAlpha: 0, filter: 'blur(20px)' },
           {
             yPercent: 0,
+            xPercent: 0,
             scale: 1,
-            autoAlpha: 1,
-            filter: 'blur(0px)',
-            duration: 2,
-            stagger: 0.14,
+            duration: 1.9,
+            ease: 'expo.out',
+            stagger: 0.42,
           },
           0,
         )
-        // moss creeps along each limb once it has settled into place
+        // moss creeps along each limb while it is still settling
         .fromTo(
           '[data-moss]',
-          { '--moss': 0.08 },
-          { '--moss': 1, duration: 2.2, ease: 'swift', stagger: 0.18 },
-          0.4,
+          { '--moss': 0, autoAlpha: 0 },
+          { '--moss': 1, autoAlpha: 1, duration: 0.9, ease: 'power2.inOut', stagger: 0.42 },
+          0.55,
         )
+        // and then it never fully stops — the reference limb keeps drifting
+        // for the whole ten seconds, which is most of why it reads as filmed
+        // rather than placed.
+        .add(() => {
+          gsap.to('[data-branch]', {
+            yPercent: 2.1,
+            xPercent: -1.3,
+            duration: 3.4,
+            ease: 'sine.inOut',
+            yoyo: true,
+            repeat: -1,
+            stagger: { each: 0.9, from: 'end' },
+          })
+        }, 1.5)
 
       // Hand-off to the second beat: the limbs push down and grow out of
       // focus while the hero copy dissolves upward.

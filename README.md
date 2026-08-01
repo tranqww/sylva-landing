@@ -56,7 +56,8 @@ npm run assets   # re-downloads the sources and recomposites everything
 
 | Beat | What happens |
 | --- | --- |
-| Load | Limbs rise out of a blur while moss sweeps along them; nav, headline lines, sub-copy and pill stagger in behind |
+| Load | A bare limb sweeps up into frame from the lower left — sharp and opaque, no fade — then moss *grows* along it while a second limb arrives behind; nav, headline lines, sub-copy and pill stagger in over the top |
+| Idle sway | The limbs never fully stop. A slow counter-phased drift runs for as long as the hero is on screen, which is most of why the composite reads as filmed rather than placed |
 | Idle | The portfolio pill unfolds — it cross-fades out while four asset rows stagger up through a blur and the container animates to its measured height |
 | Hand-off | Scrolling dissolves the hero instead of scrolling it: copy drifts up and blurs out, limbs push down, grow and defocus |
 | Reveal | The photo panel and dashboard arrive from opposite directions, then the chart draws — grid, dashed expenses, solid income, marker, tooltip |
