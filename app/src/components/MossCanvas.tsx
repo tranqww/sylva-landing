@@ -6,12 +6,22 @@ import { toLimbSpace, type Limb, type Vec } from '../lib/pointer'
 const SRC_W = 1200
 const SRC_H = 450
 
+/**
+ * The load-in pass. It has to land near the reference's coverage — the moss
+ * reads as roughly 28% of the limb by 1.5s — while leaving the rest of the
+ * limb for the pointer to paint, so it goes fully opaque over a little over
+ * half the length rather than faintly over all of it. A half-transparent mask
+ * just makes washed-out moss; it does not read as less of it.
+ */
+const BASE_PEAK = 1
+const BASE_REACH = 0.7
+
 export type MossHandle = {
   /** Paint moss at a viewport point. */
   paint: (p: Vec) => void
   /** Reveal everything — reduced motion, or a device with no pointer. */
   fill: () => void
-  /** Soft leading edge travelling along the limb, 0..1. Used for the intro. */
+  /** Load-in pass: a soft edge travelling along the limb, 0..1. Idempotent. */
   sweep: (progress: number) => void
 }
 
@@ -22,7 +32,16 @@ export type MossHandle = {
  * the cursor back and forth across the limb rather than sweeping one way, and
  * moss that has appeared never disappears. That needs a persistent, additive
  * reveal buffer, which a CSS mask cannot express — so the moss bitmap is
- * composited against a reveal canvas with `destination-in`.
+ * composited against a reveal buffer with `destination-in`.
+ *
+ * The buffer is two layers, because the two sources behave differently:
+ *
+ *   base   the load-in pass. Redrawn from scratch on every call, so calling it
+ *          once per frame for three seconds lands the same result as calling
+ *          it once. It is *not* additive — accumulating a 0.24 alpha gradient
+ *          sixty times a second saturates the mask to solid in a few frames.
+ *   trail  the pointer. Additive, never cleared, so moss builds where the
+ *          cursor lingers and stays where it has been.
  */
 export function MossCanvas({
   limb,
@@ -46,11 +65,17 @@ export function MossCanvas({
     canvas.width = W
     canvas.height = H
 
-    const reveal = document.createElement('canvas')
-    reveal.width = W
-    reveal.height = H
-    const rctx = reveal.getContext('2d')
-    if (!rctx) return
+    const make = () => {
+      const c = document.createElement('canvas')
+      c.width = W
+      c.height = H
+      return [c, c.getContext('2d')] as const
+    }
+
+    const [base, bctx] = make()
+    const [trail, tctx] = make()
+    const [reveal, vctx] = make()
+    if (!bctx || !tctx || !vctx) return
 
     const img = new Image()
     img.decoding = 'async'
@@ -64,8 +89,17 @@ export function MossCanvas({
       raf = 0
       if (!ready || !dirty) return
       dirty = false
-      ctx.clearRect(0, 0, W, H)
+
+      // reveal = base ∪ trail
+      vctx.globalCompositeOperation = 'source-over'
+      vctx.clearRect(0, 0, W, H)
+      vctx.drawImage(base, 0, 0)
+      vctx.globalCompositeOperation = 'lighter'
+      vctx.drawImage(trail, 0, 0)
+      vctx.globalCompositeOperation = 'source-over'
+
       ctx.globalCompositeOperation = 'source-over'
+      ctx.clearRect(0, 0, W, H)
       ctx.drawImage(img, 0, 0, W, H)
       ctx.globalCompositeOperation = 'destination-in'
       ctx.drawImage(reveal, 0, 0)
@@ -78,14 +112,14 @@ export function MossCanvas({
     }
 
     const blob = (x: number, y: number, r: number, a: number) => {
-      const g = rctx.createRadialGradient(x, y, 0, x, y, r)
+      const g = tctx.createRadialGradient(x, y, 0, x, y, r)
       g.addColorStop(0, `rgba(255,255,255,${a})`)
       g.addColorStop(0.5, `rgba(255,255,255,${a * 0.6})`)
       g.addColorStop(1, 'rgba(255,255,255,0)')
-      rctx.fillStyle = g
-      rctx.beginPath()
-      rctx.arc(x, y, r, 0, Math.PI * 2)
-      rctx.fill()
+      tctx.fillStyle = g
+      tctx.beginPath()
+      tctx.arc(x, y, r, 0, Math.PI * 2)
+      tctx.fill()
     }
 
     let last: Vec | null = null
@@ -104,19 +138,25 @@ export function MossCanvas({
           return
         }
 
-        rctx.globalCompositeOperation = 'lighter'
         const r = W * 0.085
+        tctx.globalCompositeOperation = 'lighter'
 
-        // Interpolate along the path so a fast sweep paints a continuous
-        // trail rather than a dotted one.
-        if (last) {
-          const steps = Math.min(24, Math.ceil(Math.hypot(x - last.x, y - last.y) / (r * 0.3)))
-          for (let i = 1; i <= steps; i++) {
-            const t = i / steps
-            blob(last.x + (x - last.x) * t, last.y + (y - last.y) * t, r, 0.17)
-          }
-        } else {
+        if (!last) {
           blob(x, y, r, 0.2)
+          last = { x, y }
+          schedule()
+          return
+        }
+
+        // A stationary cursor must not keep repainting the same spot every
+        // frame — that saturates a hover into a solid blot in a few frames.
+        const dist = Math.hypot(x - last.x, y - last.y)
+        if (dist < r * 0.12) return
+
+        const steps = Math.min(24, Math.max(1, Math.ceil(dist / (r * 0.3))))
+        for (let i = 1; i <= steps; i++) {
+          const t = i / steps
+          blob(last.x + (x - last.x) * t, last.y + (y - last.y) * t, r, 0.16)
         }
 
         last = { x, y }
@@ -124,21 +164,25 @@ export function MossCanvas({
       },
 
       fill() {
-        rctx.globalCompositeOperation = 'source-over'
-        rctx.fillStyle = '#fff'
-        rctx.fillRect(0, 0, W, H)
+        bctx.globalCompositeOperation = 'source-over'
+        bctx.fillStyle = '#fff'
+        bctx.fillRect(0, 0, W, H)
         schedule()
       },
 
       sweep(progress) {
-        rctx.globalCompositeOperation = 'lighter'
-        const edge = progress * W * 1.15
+        // Redrawn from scratch, so repeated calls are idempotent.
+        const edge = Math.max(0, progress) * W * BASE_REACH
+        bctx.globalCompositeOperation = 'source-over'
+        bctx.clearRect(0, 0, W, H)
         if (edge <= 0) return
-        const g = rctx.createLinearGradient(Math.max(0, edge - W * 0.36), 0, edge, 0)
-        g.addColorStop(0, 'rgba(255,255,255,0.24)')
+
+        const feather = W * 0.3
+        const g = bctx.createLinearGradient(Math.max(0, edge - feather), 0, edge, 0)
+        g.addColorStop(0, `rgba(255,255,255,${BASE_PEAK})`)
         g.addColorStop(1, 'rgba(255,255,255,0)')
-        rctx.fillStyle = g
-        rctx.fillRect(0, 0, edge, H)
+        bctx.fillStyle = g
+        bctx.fillRect(0, 0, edge, H)
         schedule()
       },
     }
@@ -156,10 +200,6 @@ export function MossCanvas({
   }, [limb, register, getLimbEl])
 
   return (
-    <canvas
-      ref={view}
-      aria-hidden
-      className="pointer-events-none absolute inset-0 h-auto w-full"
-    />
+    <canvas ref={view} aria-hidden className="pointer-events-none absolute inset-0 h-auto w-full" />
   )
 }

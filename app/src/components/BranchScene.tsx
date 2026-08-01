@@ -72,18 +72,20 @@ export function BranchScene() {
       // A base growth pass, so the limbs are never bare before the visitor has
       // moved anything and so touch devices — which never send a pointermove —
       // still get moss.
+      // Reference coverage: 4% of the limb at 0.5s, 10% at 1.0s, ~29% by 1.5s,
+      // then held. This pass tracks that curve.
       const base = { v: 0 }
       tl.to(
         base,
         {
           v: 1,
-          duration: coarse ? 1.5 : 2.8,
+          duration: 1.25,
           ease: 'power2.inOut',
           onUpdate: () => moss.current.forEach((m) => m?.sweep(base.v)),
         },
-        0.55,
+        0.35,
       )
-      if (coarse) tl.call(() => moss.current.forEach((m) => m?.fill()), undefined, 2.6)
+      if (coarse) tl.call(() => moss.current.forEach((m) => m?.fill()), undefined, 2.2)
 
       // ---------------------------------------------------------- pointer
       // The limbs lean toward the pointer and the moss is painted wherever it
