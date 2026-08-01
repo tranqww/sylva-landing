@@ -44,9 +44,27 @@ moss photograph, it:
 - dissolves the far end into the same haze the page gradient ends on, so the
   limb can end mid-frame without showing a seam
 
-Bark and moss are emitted as two aligned RGBA layers. The page then animates
-the moss layer's mask independently, which is what produces the "moss grows
-along the branch" beat on load.
+Bark and moss are emitted as two aligned RGBA layers, which is what lets the
+moss be revealed independently of the bark.
+
+### The moss is painted by the cursor
+
+Tracking the reference frame by frame shows the moss growth front following the
+pointer — right, then back left, then right again — rather than sweeping one
+way, and moss that has appeared never disappears. A CSS mask cannot express
+that, so the moss layer is a canvas: an offscreen buffer accumulates soft
+radial blobs along the pointer path, and the moss bitmap is composited against
+it with `destination-in`.
+
+Mapping a viewport pointer position into a rotated limb's own space is
+closed-form rather than a matrix walk — every transform on the limb is one we
+applied ourselves, so `toLimbSpace` just undoes the translate, rotation, scale
+and mirror in turn. The base rotation is set through the standalone CSS
+`rotate` property so GSAP's `x`/`y` writes to `transform` cannot clobber it.
+
+A slow base pass grows moss on load regardless, so the page is never bare
+before the visitor moves anything, and coarse-pointer devices — which never
+send a `pointermove` — get the full reveal outright.
 
 ```bash
 npm run assets   # re-downloads the sources and recomposites everything
@@ -56,8 +74,8 @@ npm run assets   # re-downloads the sources and recomposites everything
 
 | Beat | What happens |
 | --- | --- |
-| Load | A bare limb sweeps up into frame from the lower left — sharp and opaque, no fade — then moss *grows* along it while a second limb arrives behind; nav, headline lines, sub-copy and pill stagger in over the top |
-| Idle sway | The limbs never fully stop. A slow counter-phased drift runs for as long as the hero is on screen, which is most of why the composite reads as filmed rather than placed |
+| Load | A bare limb sweeps up into frame from the lower left — sharp and opaque, no fade — then a base pass of moss starts growing along it while a second limb arrives behind; nav, headline lines, sub-copy and pill stagger in over the top |
+| Pointer | **The moss is painted by the cursor.** Move it across a limb and moss grows under it, permanently. The limbs also lean toward the pointer, near limb further than far, with a subtle 3D tilt on the whole scene |
 | Idle | The portfolio pill unfolds — it cross-fades out while four asset rows stagger up through a blur and the container animates to its measured height |
 | Hand-off | Scrolling dissolves the hero instead of scrolling it: copy drifts up and blurs out, limbs push down, grow and defocus |
 | Reveal | The photo panel and dashboard arrive from opposite directions, then the chart draws — grid, dashed expenses, solid income, marker, tooltip |

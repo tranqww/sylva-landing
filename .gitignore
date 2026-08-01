@@ -1,6 +1,8 @@
 # Third-party motion reference. Kept out of the public showcase repo; the
 # private workspace repo force-adds it (`git add -f reference/`).
+# `*.mp4` is belt-and-braces: the clip has arrived in the repo root before.
 reference/
+*.mp4
 
 node_modules/
 dist/
