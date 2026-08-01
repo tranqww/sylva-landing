@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#afbd9f" />
+
+    <title>Sylva — A New Way to Manage Your Digital Wealth</title>
+    <meta
+      name="description"
+      content="Sylva is an all-in-one crypto portfolio platform. Real-time data, detailed analytics and the insights you need to make informed decisions quickly and securely."
+    />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Sylva — A New Way to Manage Your Digital Wealth" />
+    <meta
+      property="og:description"
+      content="Take full control of your crypto assets with a comprehensive portfolio management platform."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- No external origins at runtime: fonts, images and scripts are all
+         bundled. The policy is a tripwire — if a dependency ever starts
+         beaconing, the page breaks loudly instead of leaking quietly.
+         `style-src` needs 'unsafe-inline' because GSAP writes inline style
+         attributes on every frame; `img-src data:` covers the noise texture.
+         (frame-ancestors is ignored in meta form, and GitHub Pages cannot set
+         real headers — but the page has no auth, forms or state to clickjack.) -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+
+    <!-- The hero limb is the LCP element, and in a client-rendered app the
+         <img> does not exist until React mounts — so the preload scanner
+         cannot find it and the fetch starts ~180ms after the JS has already
+         landed. Vite substitutes /sylva-landing/ at build time, so this resolves
+         correctly under the GitHub Pages project subpath. -->
+    <link
+      rel="preload"
+      as="image"
+      fetchpriority="high"
+      href="/sylva-landing/assets/branch-1.webp"
+    />
+    <link rel="preload" as="image" href="/sylva-landing/assets/branch-2.webp" />
+    <script type="module" crossorigin src="/sylva-landing/assets/index-DTIGVVI1.js"></script>
+    <link rel="modulepreload" crossorigin href="/sylva-landing/assets/motion-P18i9ZFd.js">
+    <link rel="stylesheet" crossorigin href="/sylva-landing/assets/index-BMbHkJRg.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
