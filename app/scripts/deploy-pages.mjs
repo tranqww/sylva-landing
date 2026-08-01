@@ -43,18 +43,22 @@ if (!existsSync(dist)) throw new Error('dist/ was not produced')
 writeFileSync(join(dist, '.nojekyll'), '')
 
 const work = mkdtempSync(join(tmpdir(), 'ghpages-'))
+// A throwaway branch name, so a `gh-pages` branch left over from an earlier
+// deploy in this clone cannot make `checkout --orphan` fail.
+const staging = `deploy-${Date.now()}`
+
 console.log(`staging ${branch} in ${work}…`)
 
 try {
   git(['worktree', 'add', '--detach', work])
-  git(['checkout', '--orphan', branch], work)
+  git(['checkout', '--orphan', staging], work)
   git(['rm', '-rf', '--quiet', '.'], work)
 
   cpSync(dist, work, { recursive: true })
 
   git(['add', '-A'], work)
   git(['commit', '-m', `deploy: ${new Date().toISOString()}`], work)
-  git(['push', '--force', remote, `${branch}:${branch}`], work)
+  git(['push', '--force', remote, `${staging}:${branch}`], work)
 
   console.log(`pushed ${branch} to ${remote}`)
 } finally {
@@ -62,5 +66,10 @@ try {
     git(['worktree', 'remove', '--force', work])
   } catch {
     rmSync(work, { recursive: true, force: true })
+  }
+  try {
+    git(['branch', '-D', staging])
+  } catch {
+    /* the branch only exists if checkout got that far */
   }
 }
